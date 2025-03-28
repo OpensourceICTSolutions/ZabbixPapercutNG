@@ -1,0 +1,697 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 93e1d6f8cbc34414b51d1607dae0f7bc
+      name: PaperCut
+  templates:
+    - uuid: 74bd1c6f3ad847359334a8905c8f3b63
+      template: 'PaperCut by HTTP'
+      name: 'PaperCut by HTTP'
+      description: 'For Zabbix support or custom changes on this template feel free to contact https://oicts.com/ for support'
+      vendor:
+        name: OICTS
+        version: 7.0-1
+      groups:
+        - name: PaperCut
+      items:
+        - uuid: effcf283a9634c69a8a677db6f7b3cdf
+          name: 'Papercut Active DB connections'
+          type: DEPENDENT
+          key: active.db.connections
+          delay: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.database.activeConnections
+          master_item:
+            key: server.status.raw
+        - uuid: 962aa3f2dc384a2885d4a4368c692125
+          name: 'Percentage Active Connections'
+          type: CALCULATED
+          key: activedb.percentage
+          value_type: FLOAT
+          units: '%'
+          params: '100*last(//active.db.connections)/last(//max.db.connections)'
+          triggers:
+            - uuid: cfc7a3dfe21b434490a50f691a462581
+              expression: 'min(/PaperCut by HTTP/activedb.percentage,5m)>90'
+              name: 'Papercut Active database Connections > 90%'
+              priority: WARNING
+              manual_close: 'YES'
+        - uuid: 8774faafab2f4a6c85818e27be086425
+          name: 'Papercut Database Status'
+          type: DEPENDENT
+          key: db.status
+          delay: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.database.status
+          master_item:
+            key: server.status.raw
+          triggers:
+            - uuid: 3761182bf0854394add4e3254e672171
+              expression: 'last(/PaperCut by HTTP/db.status)<>"OK"'
+              name: 'Papercut Database Status NOT Ok'
+              priority: HIGH
+        - uuid: 53d305db67264e16ae3a19e34274d29a
+          name: 'RAW : Papercut Devices Status'
+          type: HTTP_AGENT
+          key: devices.status.raw
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: STR_REPLACE
+              parameters:
+                - devices
+                - data
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/health/devices'
+          query_fields:
+            - name: Authorization
+              value: '{$PAPERCUT_AUTH_KEY}'
+        - uuid: 61487f89ab3b4eb19b7b777365b54644
+          name: 'Papercut diskSpace Free MB'
+          type: DEPENDENT
+          key: disk.space.free
+          delay: '0'
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..systemMetrics.diskSpaceFreeMB
+            - type: TRIM
+              parameters:
+                - '[]'
+            - type: MULTIPLIER
+              parameters:
+                - '1048576'
+          master_item:
+            key: server.status.raw
+        - uuid: 483d63fa52624cd5b44f55ec47cbabe2
+          name: 'Papercut diskSpace Total MB'
+          type: DEPENDENT
+          key: disk.space.total
+          delay: '0'
+          units: B
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..systemMetrics.diskSpaceTotalMB
+            - type: TRIM
+              parameters:
+                - '[]'
+            - type: MULTIPLIER
+              parameters:
+                - '1048576'
+          master_item:
+            key: server.status.raw
+        - uuid: 6efbd1f8b24a4e8fa21717b89893cb9b
+          name: 'Papercut diskSpace Used %'
+          type: DEPENDENT
+          key: disk.space.used.percent
+          delay: '0'
+          value_type: FLOAT
+          units: '%'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..systemMetrics.diskSpaceUsedPercentage
+            - type: TRIM
+              parameters:
+                - '[]'
+          master_item:
+            key: server.status.raw
+          triggers:
+            - uuid: 73dbc68f4c5d4809b2e7e880855c9134
+              expression: 'min(/PaperCut by HTTP/disk.space.used.percent,10m)>{$DISKSPACE.USED.HIGH}'
+              name: 'Disk space used > {$DISKSPACE.USED.HIGH}'
+              priority: HIGH
+        - uuid: 97a8e9da3b5449b1985af39ec4bbd3a4
+          name: 'Papercut Avg Held Jobs Count'
+          type: DEPENDENT
+          key: held.jobs.count.avg
+          delay: '0'
+          units: '!Jobs'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.printers.heldJobsCountAverage
+            - type: TRIM
+              parameters:
+                - '[]'
+          master_item:
+            key: server.status.raw
+        - uuid: 8a9462ed13be47dcbe053e0b7d5b840d
+          name: 'Papercut Total Held Jobs Count'
+          type: DEPENDENT
+          key: held.jobs.count.total
+          delay: '0'
+          units: '!Jobs'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.printers.heldJobCountTotal
+            - type: TRIM
+              parameters:
+                - '[]'
+          master_item:
+            key: server.status.raw
+        - uuid: 44f81d23bf3749b69a6cac9f0f5326a3
+          name: 'Papercut JVM Memory Used Percentage'
+          type: DEPENDENT
+          key: jvm.memory.used
+          delay: '0'
+          units: '%'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..systemMetrics.jvmMemoryUsedPercentage
+            - type: TRIM
+              parameters:
+                - '[]'
+          master_item:
+            key: server.status.raw
+          triggers:
+            - uuid: 3c4a5e710a1b4239acaf9cade27945f2
+              expression: 'min(/PaperCut by HTTP/jvm.memory.used,10m)>{$JVM.MAX.USED.MEMORY}'
+              name: 'JVM Memory Used Percentage > {$JVM.MAX.USED.MEMORY}'
+              priority: AVERAGE
+              manual_close: 'YES'
+        - uuid: 13d715ecc21643aca6635da05498476d
+          name: 'Papercut Valid License Remaining Days'
+          type: DEPENDENT
+          key: license.remainingdays.valid
+          delay: '0'
+          units: '!days'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..license.licenseRemainingDays
+            - type: TRIM
+              parameters:
+                - '[]'
+          master_item:
+            key: server.status.raw
+        - uuid: ab17d57030a8495fa2402ed5e3b5dd39
+          name: 'Papercut Max DB connections'
+          type: DEPENDENT
+          key: max.db.connections
+          delay: '0'
+          units: connections
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.database.maxConnections
+          master_item:
+            key: server.status.raw
+        - uuid: 3b4fbc555a9b4979946a2e58bf45c446
+          name: 'Papercut Recent Pages Count'
+          type: HTTP_AGENT
+          key: pages.recent.printend
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.recentPagesCount
+          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/stats/recent-pages-count'
+          query_fields:
+            - name: Authorization
+              value: '{$PAPERCUT_AUTH_KEY}'
+        - uuid: f057793df5ef4729a988ae04b12cab49
+          name: 'RAW : Papercut Printer Status'
+          type: HTTP_AGENT
+          key: printer.status.raw
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          preprocessing:
+            - type: STR_REPLACE
+              parameters:
+                - printers
+                - data
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 1h
+          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/health/printers'
+          query_fields:
+            - name: Authorization
+              value: '{$PAPERCUT_AUTH_KEY}'
+        - uuid: ba0f2654dad94279ae58ab03fd4fb14e
+          name: 'RAW: Papercut Server Status'
+          type: HTTP_AGENT
+          key: server.status.raw
+          value_type: TEXT
+          trends: '0'
+          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/health'
+          query_fields:
+            - name: Authorization
+              value: '{$PAPERCUT_AUTH_KEY}'
+        - uuid: a54e73d705064841ac1cdef2e18ae347
+          name: 'Papercut Uptime'
+          type: DEPENDENT
+          key: uptime.hours
+          delay: '0'
+          value_type: FLOAT
+          units: '!Hours'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..systemMetrics.uptimeHours
+            - type: TRIM
+              parameters:
+                - '[]'
+          master_item:
+            key: server.status.raw
+        - uuid: 3e1302ee11a34abb8ddbcda67aa1acd9
+          name: 'Papercut Valid License'
+          type: DEPENDENT
+          key: valid.license
+          delay: '0'
+          valuemap:
+            name: License
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $..license.valid
+            - type: TRIM
+              parameters:
+                - '[]'
+            - type: BOOL_TO_DECIMAL
+              parameters:
+                - ''
+          master_item:
+            key: server.status.raw
+          triggers:
+            - uuid: fc750e17ab1845bd96d8efc77c67b7dd
+              expression: 'last(/PaperCut by HTTP/valid.license)<>1'
+              name: 'Papercut License Not Valid'
+              priority: HIGH
+        - uuid: 82dd6163a97a4fe9baaec9e60373b191
+          name: 'Papercut Version'
+          type: DEPENDENT
+          key: version
+          delay: '0'
+          value_type: CHAR
+          trends: '0'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.applicationServer.systemInfo.version
+          master_item:
+            key: server.status.raw
+      discovery_rules:
+        - uuid: 81bc85cfac954abcbba8fc54543c2952
+          name: 'Device List'
+          type: DEPENDENT
+          key: device.discovery
+          delay: '0'
+          item_prototypes:
+            - uuid: 85b865f729694f70a6451de9b4ffcc8d
+              name: '{#DEVICES} status'
+              type: DEPENDENT
+              key: 'status.[{#DEVICES}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.name=="{#DEVICES}")].state'
+                - type: TRIM
+                  parameters:
+                    - '[]"'
+              master_item:
+                key: devices.status.raw
+              trigger_prototypes:
+                - uuid: 204e222a9ad14ff78b69afc473dce24f
+                  expression: 'last(/PaperCut by HTTP/status.[{#DEVICES}])<>"OK"'
+                  name: '{#DEVICES} status is not OK'
+                  priority: AVERAGE
+                  description: |
+                    state: The current status of the device. Valid values include:​
+                    
+                    OK
+                    ERROR​
+                    WARNING​
+                  manual_close: 'YES'
+                  tags:
+                    - tag: statusDescription
+                      value: '{#STATUS.DESCRIPTION}'
+          master_item:
+            key: devices.status.raw
+          lld_macro_paths:
+            - lld_macro: '{#DEVICE.STATUS}'
+              path: $.state
+            - lld_macro: '{#DEVICES}'
+              path: $.name
+            - lld_macro: '{#STATUS.DESCRIPTION}'
+              path: $.statusDescription
+        - uuid: e8421369a8e347bf89051accb0284c26
+          name: 'Printer List'
+          type: DEPENDENT
+          key: printer.discovery
+          delay: '0'
+          item_prototypes:
+            - uuid: a1436cbdc0b64d8b82a779d0dbb753bc
+              name: '{#PRINTER} Status'
+              type: DEPENDENT
+              key: 'status.[{#PRINTER}]'
+              delay: '0'
+              value_type: TEXT
+              trends: '0'
+              preprocessing:
+                - type: JSONPATH
+                  parameters:
+                    - '$.data[?(@.name=="{#PRINTER}")].status'
+                - type: TRIM
+                  parameters:
+                    - '[]"'
+              master_item:
+                key: printer.status.raw
+              trigger_prototypes:
+                - uuid: 049acf446c554be8af942c4554c63d33
+                  expression: 'last(/PaperCut by HTTP/status.[{#PRINTER}])<>"OK"'
+                  name: '{#PRINTER} Status is {#PRINTER.STATUS}'
+                  priority: AVERAGE
+                  description: |
+                    The status of the printer. Valid values are:
+                    OK
+                    PAPER_JAM
+                    PAPER_OUT
+                    PAPER_PROBLEM
+                    OUTPUT_BIN_FULL
+                    NOT_AVAILABLE
+                    NO_TONER
+                    OUT_OF_MEMORY
+                    OFFLINE
+                    DOOR_OPEN
+                    USER_INTERVENTION
+                    ERROR
+                    UNKNOWN
+                  manual_close: 'YES'
+          master_item:
+            key: printer.status.raw
+          lld_macro_paths:
+            - lld_macro: '{#PRINTER.STATUS}'
+              path: $.status
+            - lld_macro: '{#PRINTER}'
+              path: $.name
+      macros:
+        - macro: '{$DISKSPACE.USED.HIGH}'
+          value: '90'
+          description: 'Papercut disk space used %'
+        - macro: '{$JVM.MAX.USED.MEMORY}'
+          value: '80'
+          description: 'JVM max memory used in %'
+        - macro: '{$PAPERCUT_AUTH_KEY}'
+          type: SECRET_TEXT
+          description: 'Papercut Auth key'
+        - macro: '{$PAPERCUT_SERVER_IP}'
+          value: 192.168.0.22
+          description: 'Papercut server IP'
+      dashboards:
+        - uuid: 909a77ee5d9e46b086ff63991fb5aa09
+          name: 'PaperCut Server Health'
+          pages:
+            - widgets:
+                - type: svggraph
+                  name: 'PaperCut DB Connections'
+                  width: '36'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: FF465C
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Papercut Active DB connections'
+                    - type: STRING
+                      name: ds.1.color
+                      value: FFD54F
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'Papercut Max DB connections'
+                    - type: STRING
+                      name: reference
+                      value: BOMWH
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: item
+                  name: 'PaperCut License'
+                  'y': '5'
+                  width: '12'
+                  height: '3'
+                  hide_header: 'YES'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '25'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'PaperCut by HTTP'
+                        key: valid.license
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: FF8A65
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: DCE775
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '1'
+                    - type: INTEGER
+                      name: value_size
+                      value: '35'
+                - type: item
+                  name: 'PaperCut License Remaining'
+                  x: '12'
+                  'y': '5'
+                  width: '12'
+                  height: '3'
+                  hide_header: 'YES'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '25'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'PaperCut by HTTP'
+                        key: license.remainingdays.valid
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: FF465C
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FFCA28
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '10'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: 0EC9AC
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '11'
+                    - type: INTEGER
+                      name: value_size
+                      value: '35'
+                - type: item
+                  name: 'PaperCut Version'
+                  x: '24'
+                  'y': '5'
+                  width: '12'
+                  height: '3'
+                  hide_header: 'YES'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '25'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'PaperCut by HTTP'
+                        key: version
+                    - type: INTEGER
+                      name: show.0
+                      value: '1'
+                    - type: INTEGER
+                      name: show.1
+                      value: '2'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: value_size
+                      value: '20'
+                - type: svggraph
+                  name: 'Papercut Disk Capacity'
+                  x: '36'
+                  width: '36'
+                  height: '5'
+                  fields:
+                    - type: STRING
+                      name: ds.0.color
+                      value: 4CAF50
+                    - type: STRING
+                      name: ds.0.items.0
+                      value: 'Papercut diskSpace Free MB'
+                    - type: STRING
+                      name: ds.1.color
+                      value: FF7043
+                    - type: STRING
+                      name: ds.1.items.0
+                      value: 'Papercut diskSpace Total MB'
+                    - type: STRING
+                      name: ds.2.color
+                      value: FFA726
+                    - type: STRING
+                      name: ds.2.items.0
+                      value: 'Papercut diskSpace Used %'
+                    - type: STRING
+                      name: reference
+                      value: QTFRS
+                    - type: INTEGER
+                      name: righty
+                      value: '0'
+                - type: gauge
+                  name: '% Active connections'
+                  x: '36'
+                  'y': '5'
+                  width: '12'
+                  height: '3'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'PaperCut by HTTP'
+                        key: activedb.percentage
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: STRING
+                      name: min
+                      value: '0'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '3'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 0EC9AC
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FFD54F
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '80'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FF465C
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '90'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+                - type: item
+                  name: 'Papercut Avg Held Jobs Count'
+                  x: '48'
+                  'y': '5'
+                  width: '12'
+                  height: '3'
+                  hide_header: 'YES'
+                  fields:
+                    - type: INTEGER
+                      name: decimal_size
+                      value: '25'
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'PaperCut by HTTP'
+                        key: held.jobs.count.avg
+                    - type: INTEGER
+                      name: value_size
+                      value: '35'
+                - type: gauge
+                  x: '60'
+                  'y': '5'
+                  width: '12'
+                  height: '3'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: 'PaperCut by HTTP'
+                        key: jvm.memory.used
+                    - type: STRING
+                      name: max
+                      value: '100'
+                    - type: STRING
+                      name: min
+                      value: '0'
+                    - type: INTEGER
+                      name: show.0
+                      value: '2'
+                    - type: INTEGER
+                      name: show.1
+                      value: '3'
+                    - type: INTEGER
+                      name: show.2
+                      value: '4'
+                    - type: INTEGER
+                      name: show.3
+                      value: '5'
+                    - type: STRING
+                      name: thresholds.0.color
+                      value: 0EC9AC
+                    - type: STRING
+                      name: thresholds.0.threshold
+                      value: '0'
+                    - type: STRING
+                      name: thresholds.1.color
+                      value: FFD54F
+                    - type: STRING
+                      name: thresholds.1.threshold
+                      value: '80'
+                    - type: STRING
+                      name: thresholds.2.color
+                      value: FF465C
+                    - type: STRING
+                      name: thresholds.2.threshold
+                      value: '90'
+                    - type: INTEGER
+                      name: th_show_arc
+                      value: '1'
+      valuemaps:
+        - uuid: 7d4bf1c1e021401d8b6ca625459146cf
+          name: License
+          mappings:
+            - value: '1'
+              newvalue: valid
+            - value: '0'
+              newvalue: 'Not Valid'
