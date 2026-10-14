@@ -70,7 +70,7 @@ zabbix_export:
             - type: DISCARD_UNCHANGED_HEARTBEAT
               parameters:
                 - 1h
-          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/health/devices'
+          url: '{$PAPERCUT_URL_SCHEME}://{$PAPERCUT_SERVER_IP}:{$PAPERCUT_SERVER_PORT}/api/health/devices'
           query_fields:
             - name: Authorization
               value: '{$PAPERCUT_AUTH_KEY}'
@@ -218,7 +218,7 @@ zabbix_export:
             - type: JSONPATH
               parameters:
                 - $.recentPagesCount
-          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/stats/recent-pages-count'
+          url: '{$PAPERCUT_URL_SCHEME}://{$PAPERCUT_SERVER_IP}:{$PAPERCUT_SERVER_PORT}/api/stats/recent-pages-count'
           query_fields:
             - name: Authorization
               value: '{$PAPERCUT_AUTH_KEY}'
@@ -237,7 +237,7 @@ zabbix_export:
             - type: DISCARD_UNCHANGED_HEARTBEAT
               parameters:
                 - 1h
-          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/health/printers'
+          url: '{$PAPERCUT_URL_SCHEME}://{$PAPERCUT_SERVER_IP}:{$PAPERCUT_SERVER_PORT}/api/health/printers'
           query_fields:
             - name: Authorization
               value: '{$PAPERCUT_AUTH_KEY}'
@@ -247,7 +247,7 @@ zabbix_export:
           key: server.status.raw
           value_type: TEXT
           trends: '0'
-          url: 'http://{$PAPERCUT_SERVER_IP}:9191/api/health'
+          url: '{$PAPERCUT_URL_SCHEME}://{$PAPERCUT_SERVER_IP}:{$PAPERCUT_SERVER_PORT}/api/health'
           query_fields:
             - name: Authorization
               value: '{$PAPERCUT_AUTH_KEY}'
@@ -408,6 +408,12 @@ zabbix_export:
         - macro: '{$JVM.MAX.USED.MEMORY}'
           value: '80'
           description: 'JVM max memory used in %'
+        - macro: '{$PAPERCUT_SERVER_PORT}'
+          value: '9191'
+          description: 'Papercut server port'
+        - macro: '{$PAPERCUT_URL_SCHEME}'
+          value: http
+          description: 'Papercut url scheme (http or https)'
         - macro: '{$PAPERCUT_AUTH_KEY}'
           type: SECRET_TEXT
           description: 'Papercut Auth key'
